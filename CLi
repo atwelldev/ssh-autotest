@@ -1,0 +1,63 @@
+# RCNTEC Cli autoTest
+# Denis Atwell
+# 01.06.2022
+# The same way is used by Robot framework for autotesting. Mix of DB, RegEx and logs. In this case i've to use .xlsx and custom RegEx. 
+
+import paramiko # SSH session module
+import time
+import openpyxl # Excel parsing
+import re
+import datetime
+import colorama
+
+# Init colorful console
+colorama.init()
+
+def test(dc = {}):
+    # Load .xlsx file for parcing
+    # THERE'S CAN BE AN ERROR ABOUT: 'No such file or directory 'tests.xlsx'. Be confident that you've this file in your root dir of file execution.  
+    book = openpyxl.load_workbook(filename="tests.xlsx")
+    ls = book["Sheet1"]
+
+    # Standart SSH template. Start session object
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    # Connect to session (to RPCM ssh shell), then invoke. 10.2101.183 - MatovoyeSteklo
+    client.connect(hostname="10.210.1.183", username="rpcmadmin", password="rpcmpassword")
+    session = client.invoke_shell()
+
+    # Just itterator for defined amount of tests in .xlsx file 
+    for i in range(1, 6):
+
+        # Execute command from .xslx, that's written as "help" and same.  
+        session.send(ls["B"+str(i)].value + '\n')
+        time.sleep(5) # timeout between requests
+        res = session.recv(20000).decode('utf-8') # return result of SSH command
+
+        # listing of results
+        if str(i) in dc.keys():
+            # Comparing by regullar expressions
+            if bool(re.search(rf'{dc[f"{i}"]}', res)):
+                print(res)
+                print(f"{colorama.Fore.LIGHTWHITE_EX}{i}: {colorama.Fore.LIGHTGREEN_EX}true {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTYELLOW_EX}{datetime.datetime.now()} {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTCYAN_EX}10.210.1.183{colorama.Fore.LIGHTWHITE_EX}")
+            else:
+                print(res)
+                print(f"{colorama.Fore.LIGHTWHITE_EX}{i}: {colorama.Fore.LIGHTRED_EX}false {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTYELLOW_EX}{datetime.datetime.now()} {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTCYAN_EX}10.210.1.183{colorama.Fore.LIGHTWHITE_EX}")
+        elif bool(re.search(rf'{ls["C"+str(i)].value}', res)):
+            print(res)
+            print(f"{colorama.Fore.LIGHTWHITE_EX}{i}: {colorama.Fore.LIGHTGREEN_EX}true {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTYELLOW_EX}{datetime.datetime.now()} {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTCYAN_EX}10.210.1.183{colorama.Fore.LIGHTWHITE_EX}")
+        else:
+            print(res)
+            print(f"{colorama.Fore.LIGHTWHITE_EX}{i}: {colorama.Fore.LIGHTRED_EX}false {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTYELLOW_EX}{datetime.datetime.now()} {colorama.Fore.LIGHTWHITE_EX}| {colorama.Fore.LIGHTCYAN_EX}10.210.1.183{colorama.Fore.LIGHTWHITE_EX}")
+def main():
+    # Speciffic parameters for tests
+    test() # {'id': 'regEx'}
+    
+if __name__ == "__main__":
+    main()
+
+
+
+
+
